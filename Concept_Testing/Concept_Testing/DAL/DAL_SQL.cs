@@ -183,23 +183,56 @@ namespace Concept_Testing.DAL
         /// </summary>
         /// <param name="cSQL">SQL string needed to Execute</param>
         /// <returns>Returns wheather or not the command modified any rows</returns>
-        private bool ExecuteSQL(string cSQL)
+        public bool ExecuteSQL(string cSQL)
         {
-            using (SqlConnection cn = new SqlConnection(connstrMSSQL))
+            lock (lockConn)
             {
-                SqlCommand cmd = new SqlCommand(cSQL, cn);
-                try
+                using (SqlConnection cn = new SqlConnection(connstrMSSQL))
                 {
-                    if (cn.State != ConnectionState.Open) { cn.Open(); }
-                    return (cmd.ExecuteNonQuery() > 0);
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
+                    SqlCommand cmd = new SqlCommand(cSQL, cn);
+                    try
+                    {
+                        if (cn.State != ConnectionState.Open) { cn.Open(); }
+                        return (cmd.ExecuteNonQuery() > 0);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                    finally
+                    {
+                        if (cn.State != ConnectionState.Closed) { cn.Close(); }
+                    }
 
-
+                }
             }
+        }
+
+        public DataTable GetTable(string cSQL)
+        {
+            lock (lockConn)
+            {
+                using (SqlConnection cn = new SqlConnection(connstrMSSQL))
+                {
+                    SqlCommand cmd = new SqlCommand(cSQL, cn);
+                    try
+                    {
+                        DataTable ret = new DataTable();
+                        if (cn.State != ConnectionState.Open) cn.Open();
+                        SqlDataAdapter da = new SqlDataAdapter(cmd);
+                        da.Fill(ret);
+                        return ret;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                    finally
+                    {
+                        if (cn.State != ConnectionState.Closed) cn.Close();
+                    }
+                }
+            }        
         }
     #endregion
 
